@@ -36,7 +36,7 @@ def reencode_videos(input_folder, output_folder):
 
         print(f"Re-encoding {filename}...")
 
-        ffmpeg_cmd = f'ffmpeg -hwaccel cuda -i "{input_path}" -c:v hevc_nvenc -preset slower "{output_path}" -y'
+        ffmpeg_cmd = f'ffmpeg -hwaccel cuda -i "{input_path}" -c:v hevc_nvenc -preset slow -rc vbr_hq -b:v 5M -maxrate:v 20M  "{output_path}" -y'
 
         try:
             result = subprocess.run(ffmpeg_cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -45,8 +45,8 @@ def reencode_videos(input_folder, output_folder):
             print(f'Error processing {filename}: {error_message}')
 
 if __name__ == "__main__":
-    input_folder = r"D:\Patrick's Documents\Other Things\Video\Dashcam\test_video"
-    output_folder = r"D:\Patrick's Documents\Other Things\Video\Dashcam\test_video_highqual"
+    input_folder = r"D:\Patrick's Documents\Other Things\Video\Dashcam\Hawaii Trip"
+    output_folder = r"D:\Patrick's Documents\Other Things\Video\Dashcam\test_video_hvenc_slower_5_20_all"
 
     if check_av1_nvenc_support():
         reencode_videos(input_folder, output_folder)
