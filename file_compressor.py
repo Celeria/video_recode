@@ -46,9 +46,10 @@ def reencode_videos(input_folder, output_folder):
 
 if __name__ == "__main__":
     input_folder = r"D:\Patrick's Documents\Other Things\Video\Dashcam\Hawaii Trip"
-    output_folder = r"D:\Patrick's Documents\Other Things\Video\Dashcam\test_video_hvenc_slower_5_20_all"
+    output_folder = r"D:\Patrick's Documents\Other Things\Video\Dashcam\test_video_hvenc_slower_5_20"
 
     if check_av1_nvenc_support():
         reencode_videos(input_folder, output_folder)
+        print("finished everything")
     else:
         print("AV1 encoding is not supported on this system. Consider using a different codec or updating your hardware/drivers.")
