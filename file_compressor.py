@@ -36,7 +36,7 @@ def reencode_videos(input_folder, output_folder):
 
         print(f"Re-encoding {filename}...")
 
-        ffmpeg_cmd = f'ffmpeg -hwaccel cuda -i "{input_path}" -c:v av1_nvenc -cq 30 "{output_path}" -y'
+        ffmpeg_cmd = f'ffmpeg -hwaccel cuda -i "{input_path}" -c:v hevc_nvenc -preset slower "{output_path}" -y'
 
         try:
             result = subprocess.run(ffmpeg_cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
