@@ -22,8 +22,9 @@ def fix_outputs(original_output_directory, fixed_output_directory):
             text_file_path = os.path.join(original_output_directory, text_file_name)
             with open(text_file_path, 'r') as f:
                 first_line = f.readline().strip()
-                total_duration_str = first_line.split(": ")[1]
-                minutes, seconds = total_duration_str.split(" minutes ")
+                total_duration_str = first_line.split(": ")[1]  # Extract duration string
+                minutes, seconds = total_duration_str.split(" minutes ") 
+                seconds = seconds.replace(" seconds", "") # Remove " seconds" from the seconds string
                 total_duration_seconds = int(minutes) * 60 + float(seconds)
 
             # Fix metadata using ffmpeg, setting the correct duration
