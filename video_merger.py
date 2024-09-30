@@ -44,7 +44,7 @@ def concatenate_sessions(target_directory, output_directory):
                     # Format the date and time for the output file name
                     session_start_time = current_session[0].split('_')[2]
                     session_start_datetime = datetime.datetime.strptime(session_start_time, "%H%M%S")
-                    formatted_time = session_start_datetime.strftime("%I-%M-%S%p")  # 12-hour time with AM/PM
+                    formatted_time = session_start_datetime.strftime("%I-%M%p")  # 12-hour time with AM/PM
                     
                     # Extract year, month, and day from the first video file in the session
                     year = current_session[0].split('_')[0]
@@ -68,7 +68,7 @@ def concatenate_sessions(target_directory, output_directory):
     if current_session:
         session_start_time = current_session[0].split('_')[2]
         session_start_datetime = datetime.datetime.strptime(session_start_time, "%H%M%S")
-        formatted_time = session_start_datetime.strftime("%I-%M-%S%p")
+        formatted_time = session_start_datetime.strftime("%I-%M%p")
         month_abbreviation = session_start_datetime.strftime("%b")
 
         session_file_name = f"{month_abbreviation} {current_session[0].split('_')[1]} {formatted_time}.txt"
