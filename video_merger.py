@@ -1,6 +1,7 @@
 import os
 import datetime
 import subprocess
+import json
 import ffmpeg
 
 def concatenate_sessions(target_directory, output_directory):
@@ -24,7 +25,6 @@ def concatenate_sessions(target_directory, output_directory):
         video_timestamp_eastern = datetime.datetime.strptime(
             f"{filename_parts[0]}_{filename_parts[1]}_{filename_parts[2]}", "%Y_%m%d_%H%M%S")
 
-        # Manually adjust timestamp from Eastern to Hawaii time (subtract 5 hours)
         video_timestamp_hawaii = video_timestamp_eastern - datetime.timedelta(hours=5)
 
         print(
@@ -42,12 +42,10 @@ def concatenate_sessions(target_directory, output_directory):
                 print(f"  - Adding to current session")
             else:
                 if time_difference.total_seconds() > 300:
-                    # Format the date and time for the output file name
                     session_start_time = current_session[0].split('_')[2]
                     session_start_datetime = datetime.datetime.strptime(session_start_time, "%H%M%S")
-                    formatted_time = session_start_datetime.strftime("%I-%M%p")  # 12-hour time with AM/PM
+                    formatted_time = session_start_datetime.strftime("%I-%M%p") 
 
-                    # Extract year, month, and day from the first video file in the session
                     year = current_session[0].split('_')[0]
                     month = datetime.datetime.strptime(current_session[0].split('_')[1][:2], "%m").strftime("%b")
                     day = current_session[0].split('_')[1][2:]
@@ -55,22 +53,30 @@ def concatenate_sessions(target_directory, output_directory):
                     session_file_name = f"{year} {month} {day} {formatted_time}.txt"
                     session_file_path = os.path.join(output_directory, session_file_name)
 
-                    # Concatenate videos using direct byte copying
                     output_video_name = f"{year} {month} {day} {formatted_time}.mp4"
                     output_video_path = os.path.join(output_directory, output_video_name)
 
-                    with open(output_video_path, 'wb') as output_video: # Open in write mode to create a new file
+                    with open(output_video_path, 'wb') as output_video:
                         for file_to_concatenate in current_session:
                             with open(os.path.join(target_directory, file_to_concatenate), 'rb') as input_video:
                                 output_video.write(input_video.read())
 
-                    # Set metadata for the output video (copy from the first video)
                     first_video_path = os.path.join(target_directory, current_session[0])
-                    input_stream = ffmpeg.input(first_video_path)
-                    output_stream = ffmpeg.output(input_stream, output_video_path,
-                                                  **{'c:v': 'copy', 'c:a': 'copy'},  # Copy video and audio codecs
-                                                  f='mp4')  # Set output format explicitly
-                    ffmpeg.run(output_stream, overwrite_output=True)  # Overwrite if file exists
+                    result = subprocess.run(['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', first_video_path],
+                                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                    probe_data = json.loads(result.stdout)
+                    video_stream = next((stream for stream in probe_data['streams'] if stream['codec_type'] == 'video'), None)
+                    audio_stream = next((stream for stream in probe_data['streams'] if stream['codec_type'] == 'audio'), None)
+
+                    in_stream = ffmpeg.input(first_video_path)
+                    out_stream = ffmpeg.output(in_stream, output_video_path, format='mp4')
+
+                    if video_stream:
+                        out_stream = out_stream.video.codec('copy')
+                    if audio_stream:
+                        out_stream = out_stream.audio.codec('copy')
+
+                    ffmpeg.run(out_stream, overwrite_output=True)
 
                     with open(session_file_path, "w") as session_file:
                         minutes, seconds = divmod(total_duration, 60)
@@ -89,7 +95,6 @@ def concatenate_sessions(target_directory, output_directory):
         session_start_datetime = datetime.datetime.strptime(session_start_time, "%H%M%S")
         formatted_time = session_start_datetime.strftime("%I-%M%p")
 
-        # Extract year, month, and day from the first video file in the last session
         year = current_session[0].split('_')[0]
         month = datetime.datetime.strptime(current_session[0].split('_')[1][:2], "%m").strftime("%b")
         day = current_session[0].split('_')[1][2:]
@@ -97,7 +102,6 @@ def concatenate_sessions(target_directory, output_directory):
         session_file_name = f"{year} {month} {day} {formatted_time}.txt"
         session_file_path = os.path.join(output_directory, session_file_name)
 
-        # Concatenate videos for the last session
         output_video_name = f"{year} {month} {day} {formatted_time}.mp4"
         output_video_path = os.path.join(output_directory, output_video_name)
 
@@ -106,13 +110,23 @@ def concatenate_sessions(target_directory, output_directory):
                 with open(os.path.join(target_directory, file_to_concatenate), 'rb') as input_video:
                     output_video.write(input_video.read())
 
-        # Set metadata for the output video
         first_video_path = os.path.join(target_directory, current_session[0])
-        input_stream = ffmpeg.input(first_video_path)
-        output_stream = ffmpeg.output(input_stream, output_video_path,
-                                      **{'c:v': 'copy', 'c:a': 'copy'},
-                                      f='mp4')
-        ffmpeg.run(output_stream, overwrite_output=True)
+        result = subprocess.run(['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format',
+                                 '-show_streams', first_video_path],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        probe_data = json.loads(result.stdout)
+        video_stream = next((stream for stream in probe_data['streams'] if stream['codec_type'] == 'video'), None)
+        audio_stream = next((stream for stream in probe_data['streams'] if stream['codec_type'] == 'audio'), None)
+
+        in_stream = ffmpeg.input(first_video_path)
+        out_stream = ffmpeg.output(in_stream, output_video_path, format='mp4')
+
+        if video_stream:
+            out_stream = out_stream.video.codec('copy')
+        if audio_stream:
+            out_stream = out_stream.audio.codec('copy')
+
+        ffmpeg.run(out_stream, overwrite_output=True)
 
         with open(session_file_path, "w") as session_file:
             minutes, seconds = divmod(total_duration, 60)
