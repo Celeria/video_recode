@@ -1,6 +1,7 @@
 import os
 import datetime
 import subprocess
+import ffmpeg
 
 def concatenate_sessions(target_directory, output_directory):
     video_files = sorted(os.listdir(target_directory))
@@ -55,13 +56,21 @@ def concatenate_sessions(target_directory, output_directory):
                     session_file_path = os.path.join(output_directory, session_file_name)
 
                     # Concatenate videos using direct byte copying
-                    output_video_name = f"{year} {month} {day} {formatted_time}.mp4" 
+                    output_video_name = f"{year} {month} {day} {formatted_time}.mp4"
                     output_video_path = os.path.join(output_directory, output_video_name)
 
-                    with open(output_video_path, 'ab') as output_video:
+                    with open(output_video_path, 'wb') as output_video: # Open in write mode to create a new file
                         for file_to_concatenate in current_session:
                             with open(os.path.join(target_directory, file_to_concatenate), 'rb') as input_video:
                                 output_video.write(input_video.read())
+
+                    # Set metadata for the output video (copy from the first video)
+                    first_video_path = os.path.join(target_directory, current_session[0])
+                    input_stream = ffmpeg.input(first_video_path)
+                    output_stream = ffmpeg.output(input_stream, output_video_path,
+                                                  **{'c:v': 'copy', 'c:a': 'copy'},  # Copy video and audio codecs
+                                                  f='mp4')  # Set output format explicitly
+                    ffmpeg.run(output_stream, overwrite_output=True)  # Overwrite if file exists
 
                     with open(session_file_path, "w") as session_file:
                         minutes, seconds = divmod(total_duration, 60)
@@ -89,13 +98,21 @@ def concatenate_sessions(target_directory, output_directory):
         session_file_path = os.path.join(output_directory, session_file_name)
 
         # Concatenate videos for the last session
-        output_video_name = f"{year} {month} {day} {formatted_time}.mp4" 
+        output_video_name = f"{year} {month} {day} {formatted_time}.mp4"
         output_video_path = os.path.join(output_directory, output_video_name)
 
-        with open(output_video_path, 'ab') as output_video:
+        with open(output_video_path, 'wb') as output_video:
             for file_to_concatenate in current_session:
                 with open(os.path.join(target_directory, file_to_concatenate), 'rb') as input_video:
                     output_video.write(input_video.read())
+
+        # Set metadata for the output video
+        first_video_path = os.path.join(target_directory, current_session[0])
+        input_stream = ffmpeg.input(first_video_path)
+        output_stream = ffmpeg.output(input_stream, output_video_path,
+                                      **{'c:v': 'copy', 'c:a': 'copy'},
+                                      f='mp4')
+        ffmpeg.run(output_stream, overwrite_output=True)
 
         with open(session_file_path, "w") as session_file:
             minutes, seconds = divmod(total_duration, 60)
