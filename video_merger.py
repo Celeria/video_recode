@@ -1,49 +1,86 @@
 import os
-import subprocess
 import datetime
+import subprocess
 
-def process_dashcam_footage(input_folder):
-    # Get all files in the input folder
-    all_files = [f for f in os.listdir(input_folder) if os.path.isfile(os.path.join(input_folder, f))]
+def concatenate_sessions(target_directory, output_directory):
+    video_files = sorted(os.listdir(target_directory))
+    os.makedirs(output_directory, exist_ok=True)
 
-    # Filter for video files (you might need to adjust this based on your file extensions)
-    video_files = [f for f in all_files if f.endswith('.mp4') or f.endswith('.avi')] 
+    current_session = []
+    last_video_end = None
+    total_duration = 0
 
-    # Group files based on their creation timestamp (assuming your dashcam names files with timestamps)
-    grouped_files = {}
-    for file in video_files:
-        timestamp_str = file.split('_')[0]  # Adjust this based on your dashcam's file naming convention
-        try:
-            timestamp = datetime.datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
-        except ValueError:
-            continue  # Skip files with invalid timestamps
+    for video_file in video_files:
+        video_path = os.path.join(target_directory, video_file)
 
-        # Group files within a 5-minute window (adjust as needed)
-        group_key = timestamp - datetime.timedelta(minutes=timestamp.minute % 5,
-                                                  seconds=timestamp.second,
-                                                  microseconds=timestamp.microsecond)
-        grouped_files.setdefault(group_key, []).append(file)
+        result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of',
+                                 'default=noprint_wrappers=1:nokey=1', video_path],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        video_duration = float(result.stdout)
+        total_duration += video_duration
 
-    for group in grouped_files.values():
-        # Generate a new file name based on the first file in the group
-        first_file = group[0]
-        new_file_name = f"concatenated_{first_file}"
+        filename_parts = video_file.split('_')
+        video_timestamp_eastern = datetime.datetime.strptime(
+            f"{filename_parts[0]}_{filename_parts[1]}_{filename_parts[2]}", "%Y_%m%d_%H%M%S")
 
-        # Concatenate videos using FFmpeg
-        input_files = [os.path.join(input_folder, f) for f in group]
-        ffmpeg_command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', '-', '-c', 'copy', new_file_name]
+        # Manually adjust timestamp from Eastern to Hawaii time (subtract 5 hours)
+        video_timestamp_hawaii = video_timestamp_eastern - datetime.timedelta(hours=5)
 
-        with open('input_list.txt', 'w') as f:
-            for input_file in input_files:
-                f.write(f"file '{input_file}'\n")
+        print(
+            f"Processing: {video_file} (Timestamp in Hawaii: {video_timestamp_hawaii.strftime('%Y_%m%d_%H%M%S')})")
 
-        with open('input_list.txt', 'r') as f:
-            subprocess.run(ffmpeg_command, stdin=f)
+        if last_video_end is None:
+            current_session.append(video_file)
+            last_video_end = video_timestamp_hawaii + datetime.timedelta(seconds=video_duration)
+            print(f"  - Starting a new session")
+        else:
+            time_difference = video_timestamp_hawaii - last_video_end
+            if time_difference.total_seconds() <= 60:
+                current_session.append(video_file)
+                last_video_end = video_timestamp_hawaii + datetime.timedelta(seconds=video_duration)
+                print(f"  - Adding to current session")
+            else:
+                if time_difference.total_seconds() > 300:
+                    # Format the date and time for the output file name
+                    session_start_time = current_session[0].split('_')[2]
+                    session_start_datetime = datetime.datetime.strptime(session_start_time, "%H%M%S")
+                    formatted_time = session_start_datetime.strftime("%I-%M-%S%p")  # 12-hour time with AM/PM
+                    
+                    # Extract year, month, and day from the first video file in the session
+                    year = current_session[0].split('_')[0]
+                    month = datetime.datetime.strptime(current_session[0].split('_')[1][:2], "%m").strftime("%b") # Extract first two characters
+                    day = current_session[0].split('_')[1]
+                    
+                    session_file_name = f"{year} {month} {day} {formatted_time}.txt" 
+                    session_file_path = os.path.join(output_directory, session_file_name)
+                    with open(session_file_path, "w") as session_file:
+                        minutes = int(total_duration // 60)  # Get only the minutes
+                        session_file.write(f"Total Duration: {minutes} minutes\n")
+                        for file_to_concatenate in current_session:
+                            session_file.write(file_to_concatenate + "\n")
+                    print(f"  - Ending session, created session file: {session_file_name}")
+                    current_session = [video_file]
+                    last_video_end = video_timestamp_hawaii + datetime.timedelta(seconds=video_duration)
+                    total_duration = video_duration
+                    print(f"  - Starting a new session")
 
-        os.remove('input_list.txt')
+    # Handle the last session
+    if current_session:
+        session_start_time = current_session[0].split('_')[2]
+        session_start_datetime = datetime.datetime.strptime(session_start_time, "%H%M%S")
+        formatted_time = session_start_datetime.strftime("%I-%M-%S%p")
+        month_abbreviation = session_start_datetime.strftime("%b")
 
-        print(f"Concatenated videos into: {new_file_name}")
+        session_file_name = f"{month_abbreviation} {current_session[0].split('_')[1]} {formatted_time}.txt"
+        session_file_path = os.path.join(output_directory, session_file_name)
+        with open(session_file_path, "w") as session_file:
+            minutes = int(total_duration // 60)
+            session_file.write(f"Total Duration: {minutes} minutes\n")
+            for file_to_concatenate in current_session:
+                session_file.write(file_to_concatenate + "\n")
+        print(f"  - Ending session, created session file: {session_file_name}")
 
-# Example usage
-input_folder = 'path/to/your/dashcam/footage'
-process_dashcam_footage(input_folder)
+# Example usage (replace with your paths)
+target_directory = r"D:\Patrick's Documents\Other Things\Video\Dashcam\Hawaii Trip"
+output_directory = r"D:\Patrick's Documents\Other Things\Video\Dashcam\test_merged_vids"
+concatenate_sessions(target_directory, output_directory)
