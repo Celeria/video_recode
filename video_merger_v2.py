@@ -42,7 +42,7 @@ def concatenate_videos(video_list, output_filename):
           "-filter_complex", 
               f"[0:v][1:v]concat=n={len(video_list)}:v=1[outv];"  # Concatenate video
               + ''.join([f"[{i}:a]" for i in range(len(video_list))])  # Gather all audio streams
-              + f"amerge=inputs={len(video_list)},channel_layout=mono[outa]",  # Merge audio streams with mono channel layout
+              + f"amerge=inputs={len(video_list)}[outa]",  # Merge audio streams (without specifying channel layout)
           "-map", "[outv]",
           "-map", "[outa]",  # Map the merged audio stream
           # "-c:v", "copy",  # Remove this to allow re-encoding for video concatenation
