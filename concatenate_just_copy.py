@@ -41,10 +41,9 @@ def concatenate_videos(video_list, output_filename):
           command.extend(["-hwaccel", "cuda", "-i", video])  # Apply hwaccel to each input
       command.extend([
           "-filter_complex", 
-              f"[0:v][1:v]concat=n={len(video_list)}:v=1[outv];"  # Concatenate video
-              + ''.join([f"[{i}:a]" for i in range(len(video_list))])  # Gather all audio streams
+              ''.join([f"[{i}:a]" for i in range(len(video_list))])  # Gather all audio streams
               + f"amerge=inputs={len(video_list)}[outa]",  # Merge audio streams
-          "-map", "[outv]",
+          "-map", "0:v",  # Map the first video stream (no concatenation needed)
           "-map", "[outa]",  # Map the merged audio stream
           "-c:v", "copy",  # Copy the video stream
           "-map_metadata", "-1",  # Remove existing metadata
