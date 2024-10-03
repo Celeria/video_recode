@@ -7,7 +7,7 @@ Created on Thu Oct  3 13:57:20 2024
 import os
 import datetime
 
-# Hardcoded directories (use absolute paths)
+# Hardcoded directories (use absolute paths with raw strings)
 source_dir = r"D:\Patrick's Documents\Other Things\Video\Dashcam\Hawaii Trip"
 output_dir = r"D:\Patrick's Documents\Other Things\Video\Dashcam\concatenated_output"
 
@@ -17,7 +17,6 @@ video_length_max = 4
 def get_video_time(filename):
   """Extracts the date and time from the filename and returns a datetime object."""
   try:
-    filename = filename.lower()
     # Extract the relevant part of the filename (YYYY_MM_DD_hhmmss)
     base_filename = os.path.splitext(os.path.basename(filename))[0]
     date_time_str = '_'.join(base_filename.split('_')[:3]).replace("_", "")  # Join only the first 3 parts
@@ -28,14 +27,17 @@ def get_video_time(filename):
 
 def concatenate_videos(video_list, output_filename):
   """Concatenates the videos in the list and saves the result to the output filename."""
-  with open("mylist.txt", "w") as f:
-    for video in video_list:
-      f.write(f"file '{os.path.abspath(video)}'\n") # Use absolute path here
-  command = f'ffmpeg -f concat -safe 0 -i mylist.txt -c copy "{output_filename}"'
-  print(f"Executing ffmpeg command: {command}") # Print the command being executed
+
+  # Create the file list string in a variable
+  file_list_string = ""
+  for video in video_list:
+      file_list_string += f"file '{video}'\n"
+
+  # Use the file list string directly in the ffmpeg command
+  command = f'ffmpeg -f concat -safe 0 -i - -c copy "{output_filename}" << {file_list_string}' 
+  print(f"Executing ffmpeg command: {command}")
   exit_code = os.system(command)
-  print(f"ffmpeg exit code: {exit_code}") # Print the exit code
-  os.remove("mylist.txt")
+  print(f"ffmpeg exit code: {exit_code}")
 
 def main():
   """Main function to process the video files."""
@@ -59,17 +61,17 @@ def main():
       continue
 
     if not current_sequence:
-      current_sequence.append(os.path.join(os.path.abspath(source_dir), video_file))  # Use absolute path here
+      current_sequence.append(os.path.join(os.path.abspath(source_dir), video_file.lower()))  # Use absolute path and lowercase here
       start_time = video_time
     else:
       time_diff = video_time - start_time
       if time_diff <= datetime.timedelta(minutes=video_length_max):
-        current_sequence.append(os.path.join(os.path.abspath(source_dir), video_file)) # Use absolute path here
+        current_sequence.append(os.path.join(os.path.abspath(source_dir), video_file.lower())) # Use absolute path and lowercase here
       else:
         print(f"Concatenating sequence: {current_sequence}") # Print the sequence being concatenated
         output_filename = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(current_sequence[0]))[0]}.mp4")
         concatenate_videos(current_sequence, output_filename)
-        current_sequence = [os.path.join(os.path.abspath(source_dir), video_file)] # Use absolute path here
+        current_sequence = [os.path.join(os.path.abspath(source_dir), video_file.lower())] # Use absolute path and lowercase here
         start_time = video_time
 
     # Concatenate the last sequence
