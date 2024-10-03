@@ -28,13 +28,24 @@ def concatenate_videos(video_list, output_filename):
   with open("mylist.txt", "w") as f:
     for video in video_list:
       f.write(f"file '{os.path.abspath(video)}'\n") # Use absolute path here
-  os.system(f'ffmpeg -f concat -safe 0 -i mylist.txt -c copy "{output_filename}"')
+  command = f'ffmpeg -f concat -safe 0 -i mylist.txt -c copy "{output_filename}"'
+  print(f"Executing ffmpeg command: {command}") # Print the command being executed
+  exit_code = os.system(command)
+  print(f"ffmpeg exit code: {exit_code}") # Print the exit code
   os.remove("mylist.txt")
 
 def main():
   """Main function to process the video files."""
-  video_files = [f for f in os.listdir(source_dir) if f.endswith('.mp4')]
+  print(f"Source directory: {source_dir}") # Print the source directory
+
+  video_files = []
+  for file in os.listdir(source_dir):
+    if file.lower().endswith(('.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv')): # Check for common video file extensions
+      video_files.append(os.path.join(source_dir, file))
+
   video_files.sort(key=get_video_time)
+
+  print(f"Video files found: {video_files}") # Print the list of video files
 
   current_sequence = []
   start_time = None
@@ -52,6 +63,7 @@ def main():
       if time_diff <= datetime.timedelta(minutes=video_length_max):
         current_sequence.append(os.path.join(os.path.abspath(source_dir), video_file)) # Use absolute path here
       else:
+        print(f"Concatenating sequence: {current_sequence}") # Print the sequence being concatenated
         output_filename = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(current_sequence[0]))[0]}.mp4")
         concatenate_videos(current_sequence, output_filename)
         current_sequence = [os.path.join(os.path.abspath(source_dir), video_file)] # Use absolute path here
@@ -59,6 +71,7 @@ def main():
 
     # Concatenate the last sequence
     if i == len(video_files) - 1:
+      print(f"Concatenating sequence: {current_sequence}") # Print the sequence being concatenated
       output_filename = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(current_sequence[0]))[0]}.mp4")
       concatenate_videos(current_sequence, output_filename)
 
