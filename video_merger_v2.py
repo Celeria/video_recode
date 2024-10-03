@@ -17,11 +17,13 @@ video_length_max = 4
 def get_video_time(filename):
   """Extracts the date and time from the filename and returns a datetime object."""
   try:
-    filename = filename.lower() # Convert filename to lowercase for consistent parsing
-    date_time_str = filename.split('_')[0] + filename.split('_')[1]
+    filename = filename.lower()
+    # Extract the relevant part of the filename (YYYY_MM_DD_hhmmss)
+    base_filename = os.path.splitext(os.path.basename(filename))[0]
+    date_time_str = '_'.join(base_filename.split('_')[:3]).replace("_", "")  # Join only the first 3 parts
     return datetime.datetime.strptime(date_time_str, '%Y%m%d%H%M%S')
   except Exception as e:
-    print(f"Error parsing filename: {filename} - {e}") # Print the exception for more detailed debugging
+    print(f"Error parsing filename: {filename} - {e}")
     return None
 
 def concatenate_videos(video_list, output_filename):
