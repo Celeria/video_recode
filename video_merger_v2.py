@@ -34,8 +34,12 @@ def concatenate_videos(video_list, output_filename):
       for video in video_list:
           command.extend(["-hwaccel", "cuda", "-i", video])  # Apply hwaccel to each input
       command.extend([
-          "-filter_complex", f"[0:v][1:v]concat=n={len(video_list)}:v=1[outv]",
+          "-filter_complex", 
+              f"[0:v][1:v]concat=n={len(video_list)}:v=1[outv];"  # Concatenate video
+              + ''.join([f"[{i}:a]" for i in range(len(video_list))])  # Gather all audio streams
+              + f"amerge=inputs={len(video_list)}[outa]",  # Merge audio streams
           "-map", "[outv]",
+          "-map", "[outa]",  # Map the merged audio stream
           "-c:v", "hevc_nvenc",  # Use NVIDIA hardware encoder for H.265
           output_filename
       ])
