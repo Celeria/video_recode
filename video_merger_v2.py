@@ -35,9 +35,9 @@ def concatenate_videos(video_list, output_filename):
       creation_time_str = first_video_filename.replace("_", "")[:14]  # YYYYMMDDHHMMSS
       creation_time = datetime.datetime.strptime(creation_time_str, '%Y%m%d%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
 
-      command = ["ffmpeg"]
+      command = ["ffmpeg", "-hwaccel", "cuda"]  # Apply hwaccel once at the beginning
       for video in video_list:
-          command.extend(["-hwaccel", "cuda", "-i", video])  # Apply hwaccel to each input
+          command.extend(["-i", video])  # Add input files
       command.extend([
           "-filter_complex", 
               f"[0:v][1:v]concat=n={len(video_list)}:v=1[outv];"  # Concatenate video

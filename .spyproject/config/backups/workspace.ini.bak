@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['file_compressor.py', 'check_support.py', 'video_merger.py', 'fix_merged_videos_date_plus_metadata.py', 'meta_data_repair.py', 'simple_concatenate_moviepy.py', 'video_merger_v2.py', 'concatenate_just_copy.py']
+recent_files = ['file_compressor.py', 'video_merger.py', '..\\..\\..\\..\\AI stuff\\Llama\\example_text_completion.py', '..\\..\\video_compressor_backup.py', '..\\..\\..\\..\\Google Data Takeout\\Location History\\Coordinate_Plot.py']
 
 [main]
 version = 0.2.0
